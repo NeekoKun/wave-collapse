@@ -54,56 +54,84 @@ class WaveFunctionCollapse:
         for x, row in enumerate(map_matrix):
             for y, _ in enumerate(row):
                 map_matrix[x][y][1] = [i for i in self.rules.keys()]
+                map_matrix[x][y][1].sort(key=lambda x: int(x))
+                random.shuffle(map_matrix[x][y][1])
 
-        for _ in range(100):
-
-            for y, row in enumerate(map_matrix):
-                print([len(i[1]) for i in row])
-                for x, element in enumerate(row):
-                    if element[0] != 0:
-                        self.screen.blit(self.sprites[element[0]], (x*100, y*100))
+        while max([max([len(x[1]) for x  in row]) for row in map_matrix]) > 1:
 
             min_entropy = len(self.rules)
 
             # get min entropy
             for y, row in enumerate(map_matrix):
                 for x, (element, states) in enumerate(row):
-                    if (element == 0) and (len(states) <= min_entropy):
+                    if (element == 0) and (len(states) <= min_entropy) and (len(states) != 0):
                         min_entropy = len(states)
                         min_x = x
                         min_y = y
-            
-            # Collapse min entropy cell
-            new_state = random.choice(map_matrix[min_x][min_y][1])
+
+            zeros = []
+
+            for new_state in map_matrix[min_y][min_x][1]:
+                # Collapse min entropy cell
+                map_matrix[min_y][min_x][0] = new_state
+
+                # Update East block
+                if (min_x < len(map_matrix[0]) - 1) and (map_matrix[min_y][min_x+1][0] == 0):
+                    east_states = [state for state in map_matrix[min_y][min_x+1][1] if state in self.rules[new_state][0]]
+                else:
+                    east_states = [1]
+
+                # Update North block
+                if (min_y != 0) and (map_matrix[min_y-1][min_x][0] == 0):
+                    north_states = [state for state in map_matrix[min_y-1][min_x][1] if state in self.rules[new_state][1]]
+                else:
+                    north_states = [1]
+
+                # Update West block
+                if (min_x != 0) and (map_matrix[min_y][min_x-1][0] == 0):
+                    west_states = [state for state in map_matrix[min_y][min_x-1][1] if state in self.rules[new_state][2]]
+                else:
+                    west_states = [1]
+
+                # Update South block
+                if (min_y < len(map_matrix) - 1) and (map_matrix[min_y+1][min_x][0] == 0):
+                    south_states = [state for state in map_matrix[min_y+1][min_x][1] if state in self.rules[new_state][3]]
+                else:
+                    south_states = [1]
+
+                zeros.append([east_states, north_states, west_states, south_states].count(0))
+
+            new_state = map_matrix[min_y][min_x][1][zeros.index(min(zeros))]
             map_matrix[min_y][min_x][0] = new_state
             map_matrix[min_y][min_x][1] = [new_state]
 
             # Update East block
             if (min_x < len(map_matrix[0]) - 1) and (map_matrix[min_y][min_x+1][0] == 0):
-                for state in map_matrix[min_y][min_x+1][1]:
-                    if state not in self.rules[new_state][0]:
-                        map_matrix[min_y][min_x+1][1].remove(state)
+                map_matrix[min_y][min_x+1][1] = [state for state in map_matrix[min_y][min_x+1][1] if state in self.rules[new_state][0]]
 
             # Update North block
             if (min_y != 0) and (map_matrix[min_y-1][min_x][0] == 0):
-                for state in map_matrix[min_y-1][min_x][1]:
-                    if state not in self.rules[new_state][1]:
-                        map_matrix[min_y-1][min_x][1].remove(state)
-            
+                map_matrix[min_y-1][min_x][1] = [state for state in map_matrix[min_y-1][min_x][1] if state in self.rules[new_state][1]]
+
             # Update West block
             if (min_x != 0) and (map_matrix[min_y][min_x-1][0] == 0):
-                for state in map_matrix[min_y][min_x-1][1]:
-                    if state not in self.rules[new_state][2]:
-                        map_matrix[min_y][min_x-1][1].remove(state)
-            
+                map_matrix[min_y][min_x-1][1] = [state for state in map_matrix[min_y][min_x-1][1] if state in self.rules[new_state][2]]
+
             # Update South block
             if (min_y < len(map_matrix) - 1) and (map_matrix[min_y+1][min_x][0] == 0):
-                for state in map_matrix[min_y+1][min_x][1]:
-                    if state not in self.rules[new_state][3]:
-                        map_matrix[min_y+1][min_x][1].remove(state)
+                map_matrix[min_y+1][min_x][1] = [state for state in map_matrix[min_y+1][min_x][1] if state in self.rules[new_state][3]]
 
+            self.screen.fill([0, 0, 0])
+
+            # Update canvas
+            for y, row in enumerate(map_matrix):
+                print([len(i[1]) for i in row])
+                for x, element in enumerate(row):
+                    if element[0] != 0:
+                        self.screen.blit(self.sprites[element[0]], (x*100, y*100))
+            
             pygame.display.flip()
-            _ = input()
+            input()
 
         return [[element[0] for element in row] for row in map_matrix]
 
@@ -118,10 +146,6 @@ class WaveFunctionCollapse:
         self.load_rules()
         self.dump_rules()
         self.map = self.generate_map((10, 10))
-
-        for y, row in enumerate(self.map):
-            for x, element in enumerate(row):
-                self.screen.blit(self.sprites[element], (x*100, y*100))
 
         while True:
             for event in pygame.event.get():
