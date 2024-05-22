@@ -1,0 +1,6 @@
+{
+    "SIZE": [1000, 1000],
+    "SOURCE": "source.csv",
+    "OUTPUT_RULES": "rules.json",
+    "SPRITES_DIR": "images"
+}
